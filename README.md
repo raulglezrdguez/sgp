@@ -5,9 +5,9 @@ Protocolo para el intercambio de datos entre aplicaciones distribuidas en redes 
 
 Elementos del protocolo.
 
-El protocolo se centra en manejar sesiones de soluciones (videojuegos) y enviar los paquetes de datos a las soluciones que lo requieran en cada actualización del estado de las sesiones.
+El protocolo se centra en manejar sesiones de aplicaciones (videojuegos) y enviar los paquetes de datos a las aplicaciones que lo requieran para cada actualización del estado de las sesiones.
 
-Está diseñado con una arquitectura cliente-servidor-cliente, de manera que los clientes intercambian paquetes a través de uno o varios servidores conectados en red.
+Está diseñado con una arquitectura cliente-servidor-cliente, de manera que los clientes intercambian paquetes de datos a través de uno o varios servidores interconectados.
 
 A través del uso de unos pocos comandos se consigue implementar el protocolo. Estos comandos son: INIT, PLAY, START, STOP, RESET, SEND, RECV, GET, SET, NOTE, DOWN y HELLO.
 
@@ -29,20 +29,21 @@ Comandos.
 La línea de comandos está formada por el comando que envía el cliente o servidor, un identificador del cliente y los parámetros que describen la acción del comando. 
 
 Los parámetros pueden aparecer en cualquier orden en el comando. Todos los comandos terminan en “\r\nEOM\r\n”.  Cada comando tiene parámetros que comparte con los demás y parámetros propios, como se describe a continuación.
+
 INIT.
 
-El comando INIT es enviado por los clientes a los servidores a los que se conectan. Es el primer comando que debe enviar un cliente al servidor al que se va a. En todos los comandos lo primero que se pasa es la profundidad de búsqueda en los servidores padres del servidor al que se conecta la aplicación cliente. El comando INIT va acompañado del identificador de la aplicación. Por ejemplo, el siguiente comando le solicita al servidor iniciar una sesión con una profundidad de búsqueda de dos, en un grupo de aplicaciones con identificador 153, la versión 1.0, la secuencia de mensajes número uno, la cantidad máxima de cuatro miembros de la sesión y un tiempo de inactividad en la sesión de 30 segundos:
+El comando INIT es enviado por los clientes a los servidores a los que se conectan. Es el primer comando que debe enviar un cliente al servidor al que se va a conectar. En todos los comandos lo primero que se pasa es la profundidad de búsqueda en los servidores padres del servidor al que se conecta la aplicación cliente. El comando INIT va acompañado del identificador de la aplicación. Por ejemplo, el siguiente comando le solicita al servidor iniciar una sesión con una profundidad de búsqueda de dos, en un grupo de aplicaciones con identificador 153, la versión 1.0, la secuencia de mensajes número uno, la cantidad máxima de cuatro miembros de la sesión y un tiempo de inactividad en la sesión de 30 segundos:
 
 “2\r\nINIT 153\r\nVersion:1.0\r\nSeq:1\r\nCount:4\r\nTime:30\r\nEOM\r\n”.
 
-El número 2 es la profundidad de búsqueda en los servidores. Este es el nivel del juego; o sea si el juego se va a jugar a nivel de Centro (0), Provincial (1) o Nacional (2).
+El número 2 es la profundidad de búsqueda en los servidores. Este es el nivel del juego; o sea si el juego se va a jugar en el servidor local (0), en el servidor padre (1), en el padre del padre (2)...
 
 El número 153 es el identificador de la aplicación (videojuego), este es un número único que se le ha asignado a la aplicación a la hora de aprobar su creación. Los identificadores de aplicaciones son enteros sin signo (unsigned int).
 La secuencia tiene que ser mayor que cero.
 
 El número 4 es la cantidad máxima de clientes que se pueden conectar a la sesión. Por ejemplo, esto significa que pueden existir como máximo 4 jugadores en una sesión para el juego con ID 153.
 
-El número 30 es el tiempo máximo en segundos que puede estar un cliente de la sesión sin actividad, después de este tiempo el cliente sale automáticamente de la sesión. El servidor le cierra la sesión al cliente después de este tiempo sin actividad.
+El número 30 es el tiempo máximo en segundos que puede estar un cliente de la sesión sin actividad, después de este tiempo el cliente es eliminado automáticamente de la sesión por el servidor. El servidor le cierra la sesión al cliente después de este tiempo sin actividad.
 
 A estos comandos el servidor responde con un mensaje de aceptación o de error. En caso que se acepte el mensaje el servidor responde OK y le envía al cliente las sesiones a las que puede ingresar, los datos de cada sesión disponible y los clientes conectados a esas sesiones. Si el servidor no envía ninguna sesión la aplicación cliente tiene que crear una sesión nueva en el comando PLAY. Algunos ejemplos de respuestas:
 
@@ -84,7 +85,7 @@ Un mensaje de error en que el servidor no encontró la sesión con espacio para 
 
 START.
 
-El comando START lo envía el cliente para comenzar un juego en la sesión a la que se ha conectado en el servidor. En el comando START el cliente envía al servidor el ID del cliente con que está jugando y la secuencia de los mensajes.
+El comando START lo envía el cliente para comenzar un juego en la sesión a la que se ha conectado en el servidor. En el comando START el cliente envía al servidor el ID del cliente con que está jugando y la secuencia de los mensajes. Este comando arranca el cronometro que contiene el tiempo que se ha jugado; pone la fecha de inicio del juego igual a la fecha que tiene el servidor.
 
 El mensaje START tiene el siguiente formato:
 
@@ -100,7 +101,7 @@ Si el mensaje no fue resuelto con éxito en el servidor el cliente recibe el err
 
 STOP.
 
-El comando STOP lo envía el cliente para terminar un juego en la sesión a la que se ha conectado en el servidor. En el comando STOP el cliente envía al servidor el ID del cliente con que está jugando y la secuencia de los mensajes.
+El comando STOP lo envía el cliente para terminar un juego en la sesión a la que se ha conectado en el servidor. En el comando STOP el cliente envía al servidor el ID del cliente con que está jugando y la secuencia de los mensajes. Este comando pone la fecha en que termina el juego igual a la fecha que tiene el servidor.
 
 El mensaje STOP tiene el siguiente formato:
 
@@ -148,11 +149,11 @@ El servidor no encontró el cliente 498:
 
 “352\r\nSeq:3\r\nInfo:498\r\nEOM\r\n”
 
-El cliente que no se encuentre conectado cuando el servidor le debe enviar un mensaje, lo pierde. Es necesario que los clientes se encuentren conectados para recibir todas las notificaciones del servidor y los mensajes de los demás clientes de la sesión.
+Los clientes que no se encuentren conectados cuando el servidor les debe enviar mensajes, pierden los mensajes. Es necesario que los clientes se encuentren conectados para recibir todas las notificaciones del servidor y los mensajes de los demás clientes de la sesión.
 
 RECV.
 
-El comando RECV lo utilizan los servidores para enviar los mensajes de un cliente a los demás clientes que lo necesiten. Se utilizan en función del comando SEND. Cuando un cliente envía un comando SEND al servidor, en el parámetro To especifica a qué otros clientes de la sesión el servidor tiene que enviar la información contenida en el parámetro Info. El servidor envía a todos los clientes en To, a través del comando RECV, la información contenida en Info. Este comando lo genera el servidor y tiene un formato como el siguiente:
+El comando RECV lo utilizan los servidores para enviar los mensajes de un cliente a los demás clientes que lo necesiten. Se utilizan en función del comando SEND. Cuando un cliente envía un comando SEND al servidor, en el parámetro "To" especifica a qué otros clientes de la sesión el servidor tiene que enviar la información contenida en el parámetro "Info". El servidor envía a todos los clientes en "To", a través del comando RECV, la información contenida en "Info". Este comando lo genera el servidor y tiene un formato como el siguiente:
 
 “0\r\nRECV 432\r\n23,18=C\r\nEOM\r\n”
 
